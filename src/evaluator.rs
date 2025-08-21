@@ -1,0 +1,97 @@
+use super::parser::AstNode;
+use super::lexer::Token;
+use super::object::Object;
+use std::collections::HashMap;
+
+pub type Environment = HashMap<String, Object>;
+
+pub fn evaluate(node: &AstNode, env: &mut Environment) -> Result<Object, String> {
+    match node {
+        AstNode::Program(statements) => {
+            let mut result = Object::Boolean(false); // Default result
+            for stmt in statements {
+                result = evaluate(stmt, env)?;
+            }
+            Ok(result)
+        }
+        AstNode::BlockStatement(statements) => {
+            let mut result = Object::Boolean(false); // Default result
+            for stmt in statements {
+                result = evaluate(stmt, env)?;
+            }
+            Ok(result)
+        }
+        AstNode::LetStatement { name, value } => {
+            let val = evaluate(value, env)?;
+            env.insert(name.clone(), val);
+            Ok(Object::Boolean(false)) // Let statements don't produce a value
+        }
+        AstNode::Identifier(name) => {
+            match env.get(name) {
+                Some(obj) => Ok(obj.clone()),
+                None => Err(format!("Identifier not found: {}", name)),
+            }
+        }
+        AstNode::Number(n) => Ok(Object::Number(*n)),
+        AstNode::Boolean(b) => Ok(Object::Boolean(*b)),
+        AstNode::PrefixExpression { op, right } => {
+            let right_val = evaluate(right, env)?;
+            match op {
+                Token::Not => Ok(Object::Boolean(!is_truthy(right_val))),
+                Token::Minus => match right_val {
+                    Object::Number(n) => Ok(Object::Number(-n)),
+                    _ => Err("Cannot negate a non-number".to_string()),
+                },
+                _ => Err("Unknown prefix operator".to_string()),
+            }
+        }
+        AstNode::InfixExpression { op, left, right } => {
+            let left_val = evaluate(left, env)?;
+            let right_val = evaluate(right, env)?;
+            match (left_val, right_val) {
+                (Object::Number(l), Object::Number(r)) => {
+                    evaluate_number_infix_op(op, l, r)
+                }
+                (Object::Boolean(l), Object::Boolean(r)) => {
+                    evaluate_boolean_infix_op(op, l, r)
+                }
+                _ => Err(format!("Type mismatch for operator {:?}", op)),
+            }
+        }
+        // These are handled by other branches
+    }
+}
+
+fn is_truthy(obj: Object) -> bool {
+    match obj {
+        Object::Boolean(b) => b,
+        Object::Number(n) => n != 0.0,
+    }
+}
+
+fn evaluate_number_infix_op(op: &Token, l: f64, r: f64) -> Result<Object, String> {
+    match op {
+        Token::Plus => Ok(Object::Number(l + r)),
+        Token::Minus => Ok(Object::Number(l - r)),
+        Token::Multiply => Ok(Object::Number(l * r)),
+        Token::Divide => if r == 0.0 { Err("Division by zero".to_string()) } else { Ok(Object::Number(l / r)) },
+        Token::Modulo => if r == 0.0 { Err("Modulo by zero".to_string()) } else { Ok(Object::Number(l % r)) },
+        Token::Equal => Ok(Object::Boolean(l == r)),
+        Token::NotEqual => Ok(Object::Boolean(l != r)),
+        Token::LessThan => Ok(Object::Boolean(l < r)),
+        Token::GreaterThan => Ok(Object::Boolean(l > r)),
+        Token::LessThanOrEqual => Ok(Object::Boolean(l <= r)),
+        Token::GreaterThanOrEqual => Ok(Object::Boolean(l >= r)),
+        _ => Err(format!("Unknown operator for numbers: {:?}", op)),
+    }
+}
+
+fn evaluate_boolean_infix_op(op: &Token, l: bool, r: bool) -> Result<Object, String> {
+    match op {
+        Token::Equal => Ok(Object::Boolean(l == r)),
+        Token::NotEqual => Ok(Object::Boolean(l != r)),
+        Token::And => Ok(Object::Boolean(l && r)),
+        Token::Or => Ok(Object::Boolean(l || r)),
+        _ => Err(format!("Unknown operator for booleans: {:?}", op)),
+    }
+}
