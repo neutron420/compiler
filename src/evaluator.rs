@@ -15,10 +15,13 @@ pub fn evaluate(node: &AstNode, env: &mut Environment) -> Result<Object, String>
             Ok(result)
         }
         AstNode::BlockStatement(statements) => {
+            // Create a new scope for block statements
+            let mut block_env = env.clone();
             let mut result = Object::Boolean(false); // Default result
             for stmt in statements {
-                result = evaluate(stmt, env)?;
+                result = evaluate(stmt, &mut block_env)?;
             }
+            // Don't merge block_env back to maintain proper scoping
             Ok(result)
         }
         AstNode::LetStatement { name, value } => {
@@ -48,17 +51,27 @@ pub fn evaluate(node: &AstNode, env: &mut Environment) -> Result<Object, String>
         AstNode::InfixExpression { op, left, right } => {
             let left_val = evaluate(left, env)?;
             let right_val = evaluate(right, env)?;
-            match (left_val, right_val) {
+            match (&left_val, &right_val) {
                 (Object::Number(l), Object::Number(r)) => {
-                    evaluate_number_infix_op(op, l, r)
+                    evaluate_number_infix_op(op, *l, *r)
                 }
                 (Object::Boolean(l), Object::Boolean(r)) => {
-                    evaluate_boolean_infix_op(op, l, r)
+                    evaluate_boolean_infix_op(op, *l, *r)
                 }
-                _ => Err(format!("Type mismatch for operator {:?}", op)),
+                // Handle equality/inequality between different types
+                (_, _) if matches!(op, Token::Equal | Token::NotEqual) => {
+                    match op {
+                        Token::Equal => Ok(Object::Boolean(false)), // Different types are never equal
+                        Token::NotEqual => Ok(Object::Boolean(true)), // Different types are always not equal
+                        _ => unreachable!(),
+                    }
+                }
+                _ => Err(format!("Type mismatch: cannot apply {:?} to {} and {}", op, 
+                    match left_val { Object::Number(_) => "number", Object::Boolean(_) => "boolean" },
+                    match right_val { Object::Number(_) => "number", Object::Boolean(_) => "boolean" }
+                )),
             }
         }
-        // These are handled by other branches
     }
 }
 
