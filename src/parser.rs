@@ -40,7 +40,7 @@ impl Parser {
     }
 
     fn parse_let_statement(&mut self) -> Result<AstNode, String> {
-        self.tokens.next(); // consume 'let'
+        self.tokens.next(); 
         let name = match self.tokens.next() {
             Some(Token::Identifier(name)) => name,
             _ => return Err("Expected identifier after 'let'".to_string()),
@@ -57,7 +57,7 @@ impl Parser {
     }
     
     fn parse_block_statement(&mut self) -> Result<AstNode, String> {
-        self.tokens.next(); // consume '{'
+        self.tokens.next();
         let mut statements = Vec::new();
         while self.tokens.peek().is_some() && self.tokens.peek() != Some(&Token::RightBrace) {
             statements.push(self.parse_statement()?);
@@ -109,7 +109,7 @@ impl Parser {
             Token::False => Ok(AstNode::Boolean(false)),
             Token::Identifier(name) => Ok(AstNode::Identifier(name)),
             op @ (Token::Minus | Token::Not) => {
-                let right = self.parse_expression(6)?; // Prefix precedence is high
+                let right = self.parse_expression(6)?;
                 Ok(AstNode::PrefixExpression { op, right: Box::new(right) })
             }
             Token::LeftParen => {

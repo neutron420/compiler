@@ -3,12 +3,11 @@ pub enum Token {
     Number(f64),
     Identifier(String),
     
-    // Keywords
     Let,
     True,
     False,
 
-    // Operators
+  
     Assign,
     Plus,
     Minus,
@@ -25,7 +24,7 @@ pub enum Token {
     And,
     Or,
 
-    // Delimiters
+ 
     LeftParen,
     RightParen,
     LeftBrace,
@@ -129,7 +128,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             '{' => tokens.push(Token::LeftBrace),
             '}' => tokens.push(Token::RightBrace),
             ';' => tokens.push(Token::Semicolon),
-            ' ' | '\t' | '\n' => (), // Ignore whitespace
+            ' ' | '\t' | '\n' => (), 
             _ => return Err(format!("Unexpected character: {}", ch)),
         }
     }

@@ -8,26 +8,26 @@ pub type Environment = HashMap<String, Object>;
 pub fn evaluate(node: &AstNode, env: &mut Environment) -> Result<Object, String> {
     match node {
         AstNode::Program(statements) => {
-            let mut result = Object::Boolean(false); // Default result
+            let mut result = Object::Boolean(false); 
             for stmt in statements {
                 result = evaluate(stmt, env)?;
             }
             Ok(result)
         }
         AstNode::BlockStatement(statements) => {
-            // Create a new scope for block statements
+        
             let mut block_env = env.clone();
-            let mut result = Object::Boolean(false); // Default result
+            let mut result = Object::Boolean(false); 
             for stmt in statements {
                 result = evaluate(stmt, &mut block_env)?;
             }
-            // Don't merge block_env back to maintain proper scoping
+            
             Ok(result)
         }
         AstNode::LetStatement { name, value } => {
             let val = evaluate(value, env)?;
             env.insert(name.clone(), val);
-            Ok(Object::Boolean(false)) // Let statements don't produce a value
+            Ok(Object::Boolean(false)) 
         }
         AstNode::Identifier(name) => {
             match env.get(name) {
@@ -58,11 +58,11 @@ pub fn evaluate(node: &AstNode, env: &mut Environment) -> Result<Object, String>
                 (Object::Boolean(l), Object::Boolean(r)) => {
                     evaluate_boolean_infix_op(op, *l, *r)
                 }
-                // Handle equality/inequality between different types
+                
                 (_, _) if matches!(op, Token::Equal | Token::NotEqual) => {
                     match op {
-                        Token::Equal => Ok(Object::Boolean(false)), // Different types are never equal
-                        Token::NotEqual => Ok(Object::Boolean(true)), // Different types are always not equal
+                        Token::Equal => Ok(Object::Boolean(false)), 
+                        Token::NotEqual => Ok(Object::Boolean(true)), 
                         _ => unreachable!(),
                     }
                 }
