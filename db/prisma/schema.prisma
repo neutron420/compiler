@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -7,4 +6,191 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("NEON_DB_DATABASE_URL")
+}
+
+model Program {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  code        String   @db.Text
+  language    String   @default("custom")
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  executions Execution[]
+  tags       ProgramTag[]
+  sharedProgram SharedProgram?
+
+  @@map("programs")
+}
+
+model Execution {
+  id            String        @id @default(cuid())
+  programId     String?
+  code          String        @db.Text
+  result        String?       @db.Text
+  error         String?       @db.Text
+  status        ExecutionStatus
+  executionTime Int?
+  memoryUsage   Int?
+  createdAt     DateTime      @default(now())
+
+  program Program? @relation(fields: [programId], references: [id], onDelete: SetNull)
+
+  @@map("executions")
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String?
+  createdAt   DateTime @default(now())
+
+  programs ProgramTag[]
+
+  @@map("tags")
+}
+
+model ProgramTag {
+  programId String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([programId, tagId])
+  @@map("program_tags")
+}
+
+model CompilerStats {
+  id                String   @id @default(cuid())
+  date              DateTime @default(now()) @db.Date
+  totalExecutions   Int      @default(0)
+  successfulExecs   Int      @default(0)
+  failedExecs       Int      @default(0)
+  avgExecutionTime  Float?
+  totalPrograms     Int      @default(0)
+  popularFeatures   Json?
+
+  @@unique([date])
+  @@map("compiler_stats")
+}
+
+model ErrorLog {
+  id         String    @id @default(cuid())
+  errorType  ErrorType
+  message    String    @db.Text
+  stackTrace String?   @db.Text
+  code       String?   @db.Text
+  metadata   Json?
+  resolved   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@map("error_logs")
+}
+
+model LanguageFeature {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String   @db.Text
+  syntax      String   @db.Text
+  examples    Json
+  category    String
+  version     String   @default("1.0")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("language_features")
+}
+
+model SharedProgram {
+  id          String   @id @default(cuid())
+  programId   String   @unique
+  title       String
+  description String?  @db.Text
+  authorName  String
+  likes       Int      @default(0)
+  views       Int      @default(0)
+  featured    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@map("shared_programs")
+}
+
+model CodeSnippet {
+  id          String   @id @default(cuid())
+  title       String
+  code        String   @db.Text
+  description String?
+  category    String
+  difficulty  String   @default("beginner")
+  isExample   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@map("code_snippets")
+}
+
+model CompilerMetrics {
+  id              String   @id @default(cuid())
+  timestamp       DateTime @default(now())
+  totalUsers      Int      @default(0)
+  activeUsers     Int      @default(0)
+  codeExecutions  Int      @default(0)
+  errorRate       Float    @default(0)
+  avgResponseTime Float    @default(0)
+  serverLoad      Float    @default(0)
+
+  @@map("compiler_metrics")
+}
+
+model FeedbackReport {
+  id        String      @id @default(cuid())
+  type      FeedbackType
+  message   String      @db.Text
+  rating    Int?
+  metadata  Json?
+  resolved  Boolean     @default(false)
+  createdAt DateTime    @default(now())
+
+  @@map("feedback_reports")
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  description String?
+  isActive    Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_config")
+}
+
+enum ExecutionStatus {
+  PENDING
+  SUCCESS
+  ERROR
+  TIMEOUT
+  MEMORY_LIMIT
+}
+
+enum ErrorType {
+  LEXER_ERROR
+  PARSER_ERROR
+  RUNTIME_ERROR
+  SYSTEM_ERROR
+  API_ERROR
+}
+
+enum FeedbackType {
+  BUG_REPORT
+  FEATURE_REQUEST
+  GENERAL_FEEDBACK
+  PERFORMANCE_ISSUE
 }
