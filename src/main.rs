@@ -110,7 +110,7 @@ async fn main() -> std::io::Result<()> {
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let pool = PgPool::connect(&database_url).await.expect("Failed to create pool.");
 
-    println!("✅ Advanced compiler server starting on http://127.0.0.1:8080");
+    println!(" Advanced compiler server starting on http://127.0.0.1:8080");
     HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin("http://localhost:3000")
