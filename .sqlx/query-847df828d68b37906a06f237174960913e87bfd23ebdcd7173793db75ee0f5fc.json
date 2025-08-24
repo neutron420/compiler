@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO executions (code, error, status) VALUES ($1, $2, $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "ExecutionStatus",
+            "kind": {
+              "Enum": [
+                "PENDING",
+                "SUCCESS",
+                "ERROR",
+                "TIMEOUT",
+                "MEMORY_LIMIT"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "847df828d68b37906a06f237174960913e87bfd23ebdcd7173793db75ee0f5fc"
+}

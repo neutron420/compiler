@@ -1,27 +1,14 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: mydatabase
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
   backend:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
-    depends_on:
-      - db
     environment:
-      DATABASE_URL: "postgresql://user:password@db:5432/mydatabase"
+      - DATABASE_URL=${DATABASE_URL}
     volumes:
       - ./src:/usr/src/app/src
       - ./Cargo.toml:/usr/src/app/Cargo.toml
@@ -40,6 +27,3 @@ services:
       - ./web:/app
       - /app/node_modules
       - /app/.next
-
-volumes:
-  postgres_data:
