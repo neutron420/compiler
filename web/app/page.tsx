@@ -14,9 +14,9 @@ import { Footer7 } from "@/components/footer-7"
 // --- Navigation Bar Component ---
 export function NavBarDemo() {
   const navItems = [
-    { name: 'Home', url: '#', icon: Home },
-    { name: 'About', url: '#', icon: User },
-    { name: 'Code Editor', url: '#', icon: Briefcase },
+    { name: 'Home', url: '/', icon: Home },
+    { name: 'About', url: '/about', icon: User },
+    { name: 'Code Compiler', url: 'compiler', icon: Briefcase },
   ];
 
   return <NavBar items={navItems} />;
