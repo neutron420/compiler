@@ -1,4 +1,5 @@
-"use client"
+"use client";
+
 import { Squares } from "@/components/squares-background";
 import { Home, User, Briefcase } from "lucide-react";
 import { NavBar } from "@/components/tubelight-navbar";
@@ -7,8 +8,7 @@ import { TreeView } from "@/components/tree-view";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
 import { Footer7 } from "@/components/footer-7";
-import { StarBorder } from "@/components/star-border";
-
+import Link from "next/link"; // ✅ import Link
 
 export function NavBarDemo() {
   const navItems = [
@@ -18,14 +18,6 @@ export function NavBarDemo() {
   ];
 
   return <NavBar items={navItems} />;
-}
-
-export function StarBorderDemo() {
-  return (
-    <div className="space-y-8">
-      <StarBorder href="/compiler">Go to the Code Compiler</StarBorder>
-    </div>
-  );
 }
 
 const DemoOne = () => {
@@ -236,8 +228,14 @@ export default function HomePage() {
             This is Your own Coding Playground
           </p>
 
+          {/* ✅ Normal button that navigates to /compiler */}
           <div className="mt-8">
-            <StarBorderDemo />
+            <Link href="/compiler">
+              <button className="px-6 py-3 rounded-lg bg-black text-white hover:bg-blue-700 transition">
+              Start Coding →
+ 
+              </button>
+            </Link>
           </div>
         </div>
       </div>
