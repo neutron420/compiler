@@ -8,7 +8,7 @@ import { TreeView } from "@/components/tree-view";
 import { motion } from "framer-motion";
 import { Footer7 } from "@/components/footer-7";
 import { useState, useEffect } from "react";
-import Link from "next/link"; // ✅ use Next.js link
+import { useRouter } from "next/navigation"; // ✅ router for button nav
 
 // ---------------- Navbar ----------------
 export function NavBarDemo() {
@@ -211,6 +211,8 @@ const Testimonials = () => {
 
 // ---------------- Main Home Page ----------------
 export default function HomePage() {
+  const router = useRouter();
+
   return (
     <main className="relative w-full bg-slate-50">
       <div className="relative flex h-screen w-full flex-col items-center justify-center">
@@ -233,14 +235,14 @@ export default function HomePage() {
             This is Your own Coding Playground
           </p>
 
-          {/* ✅ Compiler button now works EXACTLY like navbar */}
+          {/* ✅ Compiler button fixed */}
           <div className="mt-8">
-            <Link
-              href="/compiler"
+            <button
+              onClick={() => router.push("/compiler")}
               className="px-6 py-3 rounded-lg bg-white text-black border border-gray-300 hover:bg-gray-100 transition"
             >
               Compiler
-            </Link>
+            </button>
           </div>
         </div>
       </div>
