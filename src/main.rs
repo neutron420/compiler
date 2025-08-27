@@ -1,4 +1,4 @@
-// src/main.rs - Fixed version with multi-language support
+// src/main.rs - Fixed version with correct Prisma schema mapping
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, middleware::Logger};
 use serde::{Deserialize, Serialize};
 use actix_cors::Cors;
@@ -17,7 +17,7 @@ mod evaluator;
 mod object;
 
 #[derive(Debug, sqlx::Type, Clone)]
-#[sqlx(type_name = "ExecutionStatus", rename_all = "UPPERCASE")]
+#[sqlx(type_name = "ExecutionStatus", rename_all = "SCREAMING_SNAKE_CASE")]
 enum ExecutionStatus {
     Pending,
     Success,
@@ -69,14 +69,14 @@ async fn compile_handler(req: web::Json<CompileRequest>, pool: web::Data<PgPool>
 
     let response = match result {
         Ok(output) => {
-            // Log success to database
+            // Log success to database - using Prisma column names
             let _ = sqlx::query!(
-                r#"INSERT INTO executions (code, result, status, language, execution_time_ms) VALUES ($1, $2, $3, $4, $5)"#,
+                r#"INSERT INTO executions (code, result, status, execution_time_ms, language) VALUES ($1, $2, $3, $4, $5)"#,
                 code,
                 Some(output.clone()),
                 ExecutionStatus::Success as _,
-                language,
-                execution_time as i64
+                execution_time as i32,
+                language
             )
             .execute(pool.get_ref())
             .await;
@@ -88,14 +88,14 @@ async fn compile_handler(req: web::Json<CompileRequest>, pool: web::Data<PgPool>
             }
         }
         Err(error) => {
-            // Log error to database
+            // Log error to database - using Prisma column names
             let _ = sqlx::query!(
-                r#"INSERT INTO executions (code, error, status, language, execution_time_ms) VALUES ($1, $2, $3, $4, $5)"#,
+                r#"INSERT INTO executions (code, error, status, execution_time_ms, language) VALUES ($1, $2, $3, $4, $5)"#,
                 code,
                 Some(error.clone()),
                 ExecutionStatus::Error as _,
-                language,
-                execution_time as i64
+                execution_time as i32,
+                language
             )
             .execute(pool.get_ref())
             .await;
@@ -119,7 +119,6 @@ async fn execute_custom_language(code: &str) -> Result<String, String> {
     let mut env = HashMap::new();
     
     // Capture stdout for print statements
-    let mut output = Vec::new();
     let result = evaluator::evaluate(&ast, &mut env)?;
     
     // Combine any print output with final result
@@ -303,8 +302,8 @@ async fn main() -> std::io::Result<()> {
         .parse::<u16>()
         .expect("PORT must be a valid number");
 
-    println!("🚀 Multi-language compiler server starting on http://0.0.0.0:{}", port);
-    println!("📝 Supported languages: custom, rust, python, c");
+    println!("Multi-language compiler server starting on http://0.0.0.0:{}", port);
+    println!("Supported languages: custom, rust, python, c");
     
     HttpServer::new(move || {
         let cors = Cors::default()

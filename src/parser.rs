@@ -7,17 +7,17 @@ pub enum AstNode {
     // Existing nodes
     Number(f64),
     Boolean(bool),
-    String(String),  // NEW
+    String(String),
     Identifier(String),
     
-    // NEW: Array support
+    // Array support
     Array(Vec<AstNode>),
     ArrayAccess { array: Box<AstNode>, index: Box<AstNode> },
     
     // Existing statements
     LetStatement { name: String, value: Box<AstNode> },
     
-    // NEW: Control flow
+    // Control flow
     IfStatement { 
         condition: Box<AstNode>, 
         then_branch: Box<AstNode>, 
@@ -31,7 +31,7 @@ pub enum AstNode {
         body: Box<AstNode> 
     },
     
-    // NEW: Functions
+    // Functions
     FunctionDefinition { 
         name: String, 
         parameters: Vec<String>, 
@@ -40,7 +40,7 @@ pub enum AstNode {
     FunctionCall { name: String, arguments: Vec<AstNode> },
     ReturnStatement { value: Option<Box<AstNode>> },
     
-    // NEW: Control statements
+    // Control statements
     BreakStatement,
     ContinueStatement,
     
@@ -95,7 +95,6 @@ impl Parser {
         }
     }
 
-    // NEW: If statement parsing
     fn parse_if_statement(&mut self) -> Result<AstNode, String> {
         self.tokens.next(); // consume 'if'
         
@@ -116,7 +115,6 @@ impl Parser {
         })
     }
 
-    // NEW: While statement parsing
     fn parse_while_statement(&mut self) -> Result<AstNode, String> {
         self.tokens.next(); // consume 'while'
         
@@ -129,7 +127,6 @@ impl Parser {
         })
     }
 
-    // NEW: For statement parsing
     fn parse_for_statement(&mut self) -> Result<AstNode, String> {
         self.tokens.next(); // consume 'for'
         
@@ -163,7 +160,6 @@ impl Parser {
         })
     }
 
-    // NEW: Function definition parsing
     fn parse_function_definition(&mut self) -> Result<AstNode, String> {
         self.tokens.next(); // consume 'fn'
         
@@ -205,7 +201,6 @@ impl Parser {
         })
     }
 
-    // NEW: Return statement parsing
     fn parse_return_statement(&mut self) -> Result<AstNode, String> {
         self.tokens.next(); // consume 'return'
         
@@ -222,7 +217,6 @@ impl Parser {
         Ok(AstNode::ReturnStatement { value })
     }
 
-    // Existing methods with enhancements...
     fn parse_let_statement(&mut self) -> Result<AstNode, String> {
         self.tokens.next(); 
         let name = match self.tokens.next() {
@@ -306,7 +300,7 @@ impl Parser {
             Token::Number(n) => Ok(AstNode::Number(n)),
             Token::True => Ok(AstNode::Boolean(true)),
             Token::False => Ok(AstNode::Boolean(false)),
-            Token::String(s) => Ok(AstNode::String(s)),  // NEW
+            Token::String(s) => Ok(AstNode::String(s)),
             Token::Identifier(name) => {
                 // Check for function call
                 if self.tokens.peek() == Some(&Token::LeftParen) {
@@ -332,7 +326,6 @@ impl Parser {
                     Ok(AstNode::Identifier(name))
                 }
             },
-            // NEW: Array literal parsing
             Token::LeftBracket => {
                 let mut elements = Vec::new();
                 
@@ -373,7 +366,7 @@ impl Parser {
             Token::Equal | Token::NotEqual | Token::LessThan | Token::GreaterThan | Token::LessThanOrEqual | Token::GreaterThanOrEqual => 3,
             Token::Plus | Token::Minus => 4,
             Token::Multiply | Token::Divide | Token::Modulo => 5,
-            Token::LeftBracket => 7,  // Array access has high precedence
+            Token::LeftBracket => 7,
             _ => 0,
         }
     }

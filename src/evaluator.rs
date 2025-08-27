@@ -3,7 +3,7 @@ use super::lexer::Token;
 use super::object::{Object, get_builtins};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::io::{self, Write};
+// Removed unused imports: std::io::{self, Write}
 
 pub type Environment = HashMap<String, Object>;
 
@@ -32,6 +32,7 @@ pub fn add_output(text: &str) {
     }
 }
 
+// Rest of the code remains the same...
 #[derive(Debug)]
 pub enum EvalResult {
     Value(Object),

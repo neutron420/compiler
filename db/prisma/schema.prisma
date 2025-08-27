@@ -32,8 +32,9 @@ model Execution {
   result        String?       @db.Text
   error         String?       @db.Text
   status        ExecutionStatus
-  executionTime Int?
-  memoryUsage   Int?
+  executionTime Int?          @map("execution_time_ms")  // Map to snake_case for Rust compatibility
+  memoryUsage   Int?          @map("memory_usage")
+  language      String        @default("custom")        // Add language field
   createdAt     DateTime      @default(now())
 
   program Program? @relation(fields: [programId], references: [id], onDelete: SetNull)
@@ -177,7 +178,7 @@ enum ExecutionStatus {
   SUCCESS
   ERROR
   TIMEOUT
-  MEMORY_LIMIT
+  MEMORY_LIMIT      // Updated to match what your Rust code expects
 }
 
 enum ErrorType {
