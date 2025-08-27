@@ -6,23 +6,22 @@ use std::collections::HashMap;
 pub enum Object {
     Number(f64),
     Boolean(bool),
-    String(String),                                    // NEW
-    Array(Vec<Object>),                               // NEW
-    Function {                                        // NEW
+    String(String),
+    Array(Vec<Object>),
+    Function {
         parameters: Vec<String>,
         body: super::parser::AstNode,
         closure: HashMap<String, Object>,
     },
-    BuiltinFunction(fn(&[Object]) -> Result<Object, String>),  // NEW
-    Null,                                            // NEW
-    ReturnValue(Box<Object>),                        // NEW - for early returns
+    BuiltinFunction(fn(&[Object]) -> Result<Object, String>),
+    Null,
 }
 
 // Manual PartialEq implementation (avoiding function pointer comparison)
 impl PartialEq for Object {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Object::Number(a), Object::Number(b)) => a == b,
+            (Object::Number(a), Object::Number(b)) => (a - b).abs() < f64::EPSILON,
             (Object::Boolean(a), Object::Boolean(b)) => a == b,
             (Object::String(a), Object::String(b)) => a == b,
             (Object::Array(a), Object::Array(b)) => a == b,
@@ -30,7 +29,6 @@ impl PartialEq for Object {
              Object::Function { parameters: pb, body: bb, closure: cb }) =>
                 pa == pb && ba == bb && ca == cb,
             (Object::Null, Object::Null) => true,
-            (Object::ReturnValue(a), Object::ReturnValue(b)) => a == b,
             // Do not compare BuiltinFunction by pointer
             (Object::BuiltinFunction(_), Object::BuiltinFunction(_)) => false,
             _ => false,
@@ -42,17 +40,20 @@ impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Object::Number(n) => {
-                if n.fract() == 0.0 {
+                if n.fract() == 0.0 && n.abs() < 1e15 {
                     write!(f, "{}", *n as i64)
                 } else {
                     write!(f, "{}", n)
                 }
             },
             Object::Boolean(b) => write!(f, "{}", b),
-            Object::String(s) => write!(f, "\"{}\"", s),
+            Object::String(s) => write!(f, "{}", s), // Don't add quotes for display
             Object::Array(elements) => {
                 let elements_str: Vec<String> = elements.iter()
-                    .map(|e| e.to_string())
+                    .map(|e| match e {
+                        Object::String(s) => format!("\"{}\"", s),
+                        other => other.to_string(),
+                    })
                     .collect();
                 write!(f, "[{}]", elements_str.join(", "))
             },
@@ -61,7 +62,6 @@ impl fmt::Display for Object {
             },
             Object::BuiltinFunction(_) => write!(f, "builtin function"),
             Object::Null => write!(f, "null"),
-            Object::ReturnValue(obj) => write!(f, "{}", obj),
         }
     }
 }
@@ -76,7 +76,6 @@ impl Object {
             Object::Null => false,
             Object::Function { .. } => true,
             Object::BuiltinFunction(_) => true,
-            Object::ReturnValue(obj) => obj.is_truthy(),
         }
     }
 
@@ -89,7 +88,6 @@ impl Object {
             Object::Function { .. } => "function",
             Object::BuiltinFunction(_) => "builtin",
             Object::Null => "null",
-            Object::ReturnValue(obj) => obj.type_name(),
         }
     }
 }
@@ -98,17 +96,17 @@ impl Object {
 pub fn get_builtins() -> HashMap<String, Object> {
     let mut builtins = HashMap::new();
     
-    // print function
+    // I/O functions
     builtins.insert("print".to_string(), Object::BuiltinFunction(builtin_print));
+    builtins.insert("println".to_string(), Object::BuiltinFunction(builtin_println));
     
-    // len function  
+    // Collection functions
     builtins.insert("len".to_string(), Object::BuiltinFunction(builtin_len));
-    
-    // push function for arrays
     builtins.insert("push".to_string(), Object::BuiltinFunction(builtin_push));
-    
-    // pop function for arrays
     builtins.insert("pop".to_string(), Object::BuiltinFunction(builtin_pop));
+    builtins.insert("first".to_string(), Object::BuiltinFunction(builtin_first));
+    builtins.insert("last".to_string(), Object::BuiltinFunction(builtin_last));
+    builtins.insert("rest".to_string(), Object::BuiltinFunction(builtin_rest));
     
     // Mathematical functions
     builtins.insert("abs".to_string(), Object::BuiltinFunction(builtin_abs));
@@ -119,39 +117,51 @@ pub fn get_builtins() -> HashMap<String, Object> {
     builtins.insert("round".to_string(), Object::BuiltinFunction(builtin_round));
     builtins.insert("min".to_string(), Object::BuiltinFunction(builtin_min));
     builtins.insert("max".to_string(), Object::BuiltinFunction(builtin_max));
+    builtins.insert("sin".to_string(), Object::BuiltinFunction(builtin_sin));
+    builtins.insert("cos".to_string(), Object::BuiltinFunction(builtin_cos));
+    builtins.insert("tan".to_string(), Object::BuiltinFunction(builtin_tan));
     
     // String functions
     builtins.insert("substr".to_string(), Object::BuiltinFunction(builtin_substr));
     builtins.insert("upper".to_string(), Object::BuiltinFunction(builtin_upper));
     builtins.insert("lower".to_string(), Object::BuiltinFunction(builtin_lower));
+    builtins.insert("trim".to_string(), Object::BuiltinFunction(builtin_trim));
+    builtins.insert("split".to_string(), Object::BuiltinFunction(builtin_split));
+    builtins.insert("join".to_string(), Object::BuiltinFunction(builtin_join));
     
-    // Type checking functions
+    // Type checking and conversion functions
     builtins.insert("type".to_string(), Object::BuiltinFunction(builtin_type));
+    builtins.insert("to_string".to_string(), Object::BuiltinFunction(builtin_to_string));
+    builtins.insert("to_number".to_string(), Object::BuiltinFunction(builtin_to_number));
     
     builtins
 }
 
+// I/O Functions
 fn builtin_print(args: &[Object]) -> Result<Object, String> {
     for (i, arg) in args.iter().enumerate() {
         if i > 0 {
-            print!(" ");
+            super::evaluator::add_output(" ");
         }
-        match arg {
-            Object::String(s) => print!("{}", s),
-            other => print!("{}", other),
-        }
+        super::evaluator::add_output(&arg.to_string());
     }
-    println!();
     Ok(Object::Null)
 }
 
+fn builtin_println(args: &[Object]) -> Result<Object, String> {
+    builtin_print(args)?;
+    super::evaluator::add_output("\n");
+    Ok(Object::Null)
+}
+
+// Collection Functions
 fn builtin_len(args: &[Object]) -> Result<Object, String> {
     if args.len() != 1 {
         return Err(format!("len() takes exactly 1 argument, got {}", args.len()));
     }
     
     match &args[0] {
-        Object::String(s) => Ok(Object::Number(s.len() as f64)),
+        Object::String(s) => Ok(Object::Number(s.chars().count() as f64)),
         Object::Array(arr) => Ok(Object::Number(arr.len() as f64)),
         other => Err(format!("len() not supported for {}", other.type_name())),
     }
@@ -190,183 +200,54 @@ fn builtin_pop(args: &[Object]) -> Result<Object, String> {
     }
 }
 
-fn builtin_abs(args: &[Object]) -> Result<Object, String> {
+fn builtin_first(args: &[Object]) -> Result<Object, String> {
     if args.len() != 1 {
-        return Err(format!("abs() takes exactly 1 argument, got {}", args.len()));
+        return Err(format!("first() takes exactly 1 argument, got {}", args.len()));
     }
     
     match &args[0] {
-        Object::Number(n) => Ok(Object::Number(n.abs())),
-        other => Err(format!("abs() not supported for {}", other.type_name())),
-    }
-}
-
-fn builtin_sqrt(args: &[Object]) -> Result<Object, String> {
-    if args.len() != 1 {
-        return Err(format!("sqrt() takes exactly 1 argument, got {}", args.len()));
-    }
-    
-    match &args[0] {
-        Object::Number(n) => {
-            if *n < 0.0 {
-                return Err("sqrt() of negative number".to_string());
-            }
-            Ok(Object::Number(n.sqrt()))
-        },
-        other => Err(format!("sqrt() not supported for {}", other.type_name())),
-    }
-}
-
-fn builtin_pow(args: &[Object]) -> Result<Object, String> {
-    if args.len() != 2 {
-        return Err(format!("pow() takes exactly 2 arguments, got {}", args.len()));
-    }
-    
-    match (&args[0], &args[1]) {
-        (Object::Number(base), Object::Number(exp)) => {
-            Ok(Object::Number(base.powf(*exp)))
-        },
-        _ => Err("pow() requires two numbers".to_string()),
-    }
-}
-
-fn builtin_floor(args: &[Object]) -> Result<Object, String> {
-    if args.len() != 1 {
-        return Err(format!("floor() takes exactly 1 argument, got {}", args.len()));
-    }
-    
-    match &args[0] {
-        Object::Number(n) => Ok(Object::Number(n.floor())),
-        other => Err(format!("floor() not supported for {}", other.type_name())),
-    }
-}
-
-fn builtin_ceil(args: &[Object]) -> Result<Object, String> {
-    if args.len() != 1 {
-        return Err(format!("ceil() takes exactly 1 argument, got {}", args.len()));
-    }
-    
-    match &args[0] {
-        Object::Number(n) => Ok(Object::Number(n.ceil())),
-        other => Err(format!("ceil() not supported for {}", other.type_name())),
-    }
-}
-
-fn builtin_round(args: &[Object]) -> Result<Object, String> {
-    if args.len() != 1 {
-        return Err(format!("round() takes exactly 1 argument, got {}", args.len()));
-    }
-    
-    match &args[0] {
-        Object::Number(n) => Ok(Object::Number(n.round())),
-        other => Err(format!("round() not supported for {}", other.type_name())),
-    }
-}
-
-fn builtin_min(args: &[Object]) -> Result<Object, String> {
-    if args.is_empty() {
-        return Err("min() requires at least 1 argument".to_string());
-    }
-    
-    let mut min_val = match &args[0] {
-        Object::Number(n) => *n,
-        other => return Err(format!("min() not supported for {}", other.type_name())),
-    };
-    
-    for arg in &args[1..] {
-        match arg {
-            Object::Number(n) => {
-                if *n < min_val {
-                    min_val = *n;
-                }
-            },
-            other => return Err(format!("min() not supported for {}", other.type_name())),
-        }
-    }
-    
-    Ok(Object::Number(min_val))
-}
-
-fn builtin_max(args: &[Object]) -> Result<Object, String> {
-    if args.is_empty() {
-        return Err("max() requires at least 1 argument".to_string());
-    }
-    
-    let mut max_val = match &args[0] {
-        Object::Number(n) => *n,
-        other => return Err(format!("max() not supported for {}", other.type_name())),
-    };
-    
-    for arg in &args[1..] {
-        match arg {
-            Object::Number(n) => {
-                if *n > max_val {
-                    max_val = *n;
-                }
-            },
-            other => return Err(format!("max() not supported for {}", other.type_name())),
-        }
-    }
-    
-    Ok(Object::Number(max_val))
-}
-
-fn builtin_substr(args: &[Object]) -> Result<Object, String> {
-    if args.len() < 2 || args.len() > 3 {
-        return Err(format!("substr() takes 2 or 3 arguments, got {}", args.len()));
-    }
-    
-    match (&args[0], &args[1]) {
-        (Object::String(s), Object::Number(start)) => {
-            let start_idx = *start as usize;
-            if start_idx >= s.len() {
-                return Ok(Object::String("".to_string()));
-            }
-            
-            let result = if args.len() == 3 {
-                match &args[2] {
-                    Object::Number(len) => {
-                        let len_val = *len as usize;
-                        let end_idx = std::cmp::min(start_idx + len_val, s.len());
-                        s.chars().skip(start_idx).take(end_idx - start_idx).collect()
-                    },
-                    _ => return Err("substr() length must be a number".to_string()),
-                }
+        Object::Array(arr) => {
+            if arr.is_empty() {
+                Ok(Object::Null)
             } else {
-                s.chars().skip(start_idx).collect()
-            };
-            Ok(Object::String(result))
+                Ok(arr[0].clone())
+            }
         },
-        _ => Err("substr() requires string and number".to_string()),
+        other => Err(format!("first() not supported for {}", other.type_name())),
     }
 }
 
-fn builtin_upper(args: &[Object]) -> Result<Object, String> {
+fn builtin_last(args: &[Object]) -> Result<Object, String> {
     if args.len() != 1 {
-        return Err(format!("upper() takes exactly 1 argument, got {}", args.len()));
+        return Err(format!("last() takes exactly 1 argument, got {}", args.len()));
     }
     
     match &args[0] {
-        Object::String(s) => Ok(Object::String(s.to_uppercase())),
-        other => Err(format!("upper() not supported for {}", other.type_name())),
+        Object::Array(arr) => {
+            if arr.is_empty() {
+                Ok(Object::Null)
+            } else {
+                Ok(arr[arr.len() - 1].clone())
+            }
+        },
+        other => Err(format!("last() not supported for {}", other.type_name())),
     }
 }
 
-fn builtin_lower(args: &[Object]) -> Result<Object, String> {
+fn builtin_rest(args: &[Object]) -> Result<Object, String> {
     if args.len() != 1 {
-        return Err(format!("lower() takes exactly 1 argument, got {}", args.len()));
+        return Err(format!("rest() takes exactly 1 argument, got {}", args.len()));
     }
     
     match &args[0] {
-        Object::String(s) => Ok(Object::String(s.to_lowercase())),
-        other => Err(format!("lower() not supported for {}", other.type_name())),
+        Object::Array(arr) => {
+            if arr.len() <= 1 {
+                Ok(Object::Array(vec![]))
+            } else {
+                Ok(Object::Array(arr[1..].to_vec()))
+            }
+        },
+        other => Err(format!("rest() not supported for {}", other.type_name())),
     }
 }
-
-fn builtin_type(args: &[Object]) -> Result<Object, String> {
-    if args.len() != 1 {
-        return Err(format!("type() takes exactly 1 argument, got {}", args.len()));
-    }
-    
-    Ok(Object::String(args[0].type_name().to_string()))
-}
+fn builtin_abs(args: &[Object]) -> Result<Object, String
