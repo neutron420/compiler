@@ -8,7 +8,8 @@ use dotenv::dotenv;
 use std::env;
 use std::process::{Command, Stdio};
 use std::io::Write;
-use tempfile::NamedTempFile;
+// Use Builder to create a tempfile with an extension
+use tempfile::{NamedTempFile, Builder};
 use tokio::time::{timeout, Duration};
 
 mod lexer;
@@ -134,9 +135,12 @@ async fn execute_custom_language(code: &str) -> Result<String, String> {
 // Execute Rust code
 async fn execute_rust_code(code: &str) -> Result<String, String> {
     // Create temporary file for Rust code
-    let mut temp_file = NamedTempFile::new()
+    let mut temp_file = Builder::new()
+        .prefix("user_code_")
+        .suffix(".rs")
+        .tempfile()
         .map_err(|e| format!("Failed to create temp file: {}", e))?;
-    
+
     // Wrap code in main function if not present
     let wrapped_code = if !code.contains("fn main") {
         format!("fn main() {{\n{}\n}}", code)
@@ -156,6 +160,8 @@ async fn execute_rust_code(code: &str) -> Result<String, String> {
             .arg(temp_path)
             .arg("-o")
             .arg(&exe_path)
+            .arg("--crate-name") 
+            .arg("user_code")   
             .arg("--edition=2021")
             .arg("-A")
             .arg("warnings")
@@ -202,7 +208,8 @@ async fn execute_rust_code(code: &str) -> Result<String, String> {
 // Execute Python code
 async fn execute_python_code(code: &str) -> Result<String, String> {
     let output = timeout(EXECUTION_TIMEOUT, async {
-        Command::new("python3")
+        // --- FIX: Changed "python3" to "python" for Windows compatibility ---
+        Command::new("python")
             .arg("-c")
             .arg(code)
             .stdout(Stdio::piped())
@@ -228,8 +235,11 @@ async fn execute_python_code(code: &str) -> Result<String, String> {
 
 // Execute C code
 async fn execute_c_code(code: &str) -> Result<String, String> {
-    // Create temporary file for C code
-    let mut temp_file = NamedTempFile::new()
+    // --- FIX: Create a temp file that ends with ".c" ---
+    let mut temp_file = Builder::new()
+        .prefix("user_code_")
+        .suffix(".c")
+        .tempfile()
         .map_err(|e| format!("Failed to create temp file: {}", e))?;
     
     write!(temp_file, "{}", code)
