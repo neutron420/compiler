@@ -1,16 +1,15 @@
-"use client";
-
+"use client"
 import { Squares } from "@/components/squares-background";
 import { Home, User, Briefcase } from "lucide-react";
 import { NavBar } from "@/components/tubelight-navbar";
 import { TestimonialsColumn } from "@/components/testimonials-columns-1";
 import { TreeView } from "@/components/tree-view";
 import { motion } from "framer-motion";
+import React, { useState, useEffect } from "react";
 import { Footer7 } from "@/components/footer-7";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // ✅ router for button nav
+import { StarBorder } from "@/components/star-border";
 
-// ---------------- Navbar ----------------
+
 export function NavBarDemo() {
   const navItems = [
     { name: "Home", url: "/", icon: Home },
@@ -21,7 +20,14 @@ export function NavBarDemo() {
   return <NavBar items={navItems} />;
 }
 
-// ---------------- File Explorer ----------------
+export function StarBorderDemo() {
+  return (
+    <div className="space-y-8">
+      <StarBorder href="/compiler">Go to the Code Compiler</StarBorder>
+    </div>
+  );
+}
+
 const DemoOne = () => {
   const treeData = [
     {
@@ -85,12 +91,10 @@ const DemoOne = () => {
 
 export { DemoOne };
 
-// ---------------- Footer ----------------
 const FooterDemo = () => {
   return <Footer7 />;
 };
 
-// ---------------- Testimonials ----------------
 const testimonials = [
   {
     text: "This ERP revolutionized our operations, streamlining finance and inventory. The cloud-based platform keeps us productive, even remotely.",
@@ -209,10 +213,7 @@ const Testimonials = () => {
   );
 };
 
-// ---------------- Main Home Page ----------------
 export default function HomePage() {
-  const router = useRouter();
-
   return (
     <main className="relative w-full bg-slate-50">
       <div className="relative flex h-screen w-full flex-col items-center justify-center">
@@ -235,14 +236,8 @@ export default function HomePage() {
             This is Your own Coding Playground
           </p>
 
-          {/* ✅ Compiler button fixed */}
           <div className="mt-8">
-            <button
-              onClick={() => router.push("/compiler")}
-              className="px-6 py-3 rounded-lg bg-white text-black border border-gray-300 hover:bg-gray-100 transition"
-            >
-              Compiler
-            </button>
+            <StarBorderDemo />
           </div>
         </div>
       </div>
