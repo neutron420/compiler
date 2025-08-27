@@ -1,4 +1,4 @@
-// src/main.rs - Fixed version with correct Prisma schema mapping
+
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, middleware::Logger};
 use serde::{Deserialize, Serialize};
 use actix_cors::Cors;

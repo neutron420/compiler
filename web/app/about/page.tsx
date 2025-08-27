@@ -1,13 +1,21 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import { NavBar } from "@/components/tubelight-navbar"; 
+import { Home, User, Briefcase } from "lucide-react"; 
 
 export default function AboutPage() {
+  const navItems = [
+    { name: "Home", url: "/", icon: Home },
+    { name: "About", url: "/about", icon: User },
+    { name: "Compiler", url: "/compiler", icon: Briefcase },
+  ];
+
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto px-6 py-16">
-        
-
+      <NavBar items={navItems} />
+      {/* Change: Adjusted padding from py-16 to pt-32 pb-16 to add more space at the top */}
+      <div className="max-w-4xl mx-auto px-6 pt-32 pb-16">
         <header className="mb-16">
           <div className="text-center">
             <h1 className="text-5xl font-bold text-black mb-4">About Code.Connect</h1>

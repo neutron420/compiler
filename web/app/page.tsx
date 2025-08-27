@@ -3,30 +3,25 @@
 import { Squares } from "@/components/squares-background";
 import { Home, User, Briefcase } from "lucide-react";
 import { NavBar } from "@/components/tubelight-navbar";
-import { StarBorder } from "@/components/star-border";
 import { TestimonialsColumn } from "@/components/testimonials-columns-1";
 import { TreeView } from "@/components/tree-view";
 import { motion } from "framer-motion";
-import React, { useState, useEffect } from "react";
 import { Footer7 } from "@/components/footer-7";
+import { useState, useEffect } from "react";
+import Link from "next/link"; // ✅ use Next.js link
 
+// ---------------- Navbar ----------------
 export function NavBarDemo() {
   const navItems = [
     { name: "Home", url: "/", icon: Home },
     { name: "About", url: "/about", icon: User },
-    { name: "Code Compiler", url: "compiler", icon: Briefcase },
+    { name: "Code Compiler", url: "/compiler", icon: Briefcase },
   ];
 
   return <NavBar items={navItems} />;
 }
 
-export function StarBorderDemo() {
-  return (
-    <div className="space-y-8">
-      <StarBorder>Go to the Code Editor</StarBorder>
-    </div>
-  );
-}
+// ---------------- File Explorer ----------------
 const DemoOne = () => {
   const treeData = [
     {
@@ -76,32 +71,26 @@ const DemoOne = () => {
   ];
 
   return (
-    <>
-      <div className="max-w-xl mx-auto w-full">
-        <TreeView
-          data={treeData}
-          onNodeClick={(node: {
-            id: string;
-            label: string;
-            children?: Array<{
-              id: string;
-              label: string;
-              children?: unknown[];
-            }>;
-          }) => console.log("Clicked:", node.label)}
-          defaultExpandedIds={["1"]}
-        />
-      </div>
-    </>
+    <div className="max-w-xl mx-auto w-full">
+      <TreeView
+        data={treeData}
+        onNodeClick={(node: { id: string; label: string }) =>
+          console.log("Clicked:", node.label)
+        }
+        defaultExpandedIds={["1"]}
+      />
+    </div>
   );
 };
 
 export { DemoOne };
 
+// ---------------- Footer ----------------
 const FooterDemo = () => {
   return <Footer7 />;
 };
 
+// ---------------- Testimonials ----------------
 const testimonials = [
   {
     text: "This ERP revolutionized our operations, streamlining finance and inventory. The cloud-based platform keeps us productive, even remotely.",
@@ -220,6 +209,7 @@ const Testimonials = () => {
   );
 };
 
+// ---------------- Main Home Page ----------------
 export default function HomePage() {
   return (
     <main className="relative w-full bg-slate-50">
@@ -243,8 +233,14 @@ export default function HomePage() {
             This is Your own Coding Playground
           </p>
 
+          {/* ✅ Compiler button now works EXACTLY like navbar */}
           <div className="mt-8">
-            <StarBorderDemo />
+            <Link
+              href="/compiler"
+              className="px-6 py-3 rounded-lg bg-white text-black border border-gray-300 hover:bg-gray-100 transition"
+            >
+              Compiler
+            </Link>
           </div>
         </div>
       </div>
