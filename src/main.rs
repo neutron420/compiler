@@ -42,14 +42,13 @@ struct CompileResponse {
 
 // Enhanced security for code execution
 const EXECUTION_TIMEOUT: Duration = Duration::from_secs(10);
-const MAX_OUTPUT_SIZE: usize = 10_000; // 10KB max output
+const MAX_OUTPUT_SIZE: usize = 10_000; 
 
 async fn compile_handler(req: web::Json<CompileRequest>, pool: web::Data<PgPool>) -> impl Responder {
     let start_time = std::time::Instant::now();
     let code = &req.code;
     let language = &req.language.to_lowercase();
 
-    // Security: Basic input validation
     if code.len() > 50_000 {
         return HttpResponse::BadRequest().json(CompileResponse {
             result: None,
