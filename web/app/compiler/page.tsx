@@ -9,16 +9,11 @@ import { OutputPanel } from "@/components/OutputPanel";
 
 import { Home, User, Briefcase, Play, Loader } from "lucide-react";
 
-// --- Starter Code for each language ---
 const starterCode: Record<LanguageKey, string> = {
   custom: `// Welcome to the Custom Language!\nfn fibonacci(n) {\n  if (n <= 1) {\n    return n;\n  }\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nlet result = fibonacci(10);\nprintln("Fibonacci(10) is:", result);\n`,
   rust: `fn main() {\n    println!("Hello from Rust!");\n}`,
   python: `print("Hello from Python!")`,
   c: `#include <stdio.h>\n\nint main() {\n    printf("Hello from C!\\n");\n    return 0;\n}`,
-  cpp: `#include <iostream>\n\nint main() {\n    std::cout << "Hello from C++!" << std::endl;\n    return 0;\n}`,
-  go: `package main\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello from Go!")\n}`,
-  javascript: `console.log("Hello from JavaScript!");`,
-  typescript: `console.log("Hello from TypeScript!");`,
 };
 
 export default function CompilerPage() {
