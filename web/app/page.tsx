@@ -1,39 +1,32 @@
-// Add this directive at the top to make the entire file a Client Component
-"use client"; 
+"use client";
 
 import { Squares } from "@/components/squares-background";
-import { Home, User, Briefcase } from 'lucide-react';
+import { Home, User, Briefcase } from "lucide-react";
 import { NavBar } from "@/components/tubelight-navbar";
 import { StarBorder } from "@/components/star-border";
 import { TestimonialsColumn } from "@/components/testimonials-columns-1";
 import { TreeView } from "@/components/tree-view";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
-import { Footer7 } from "@/components/footer-7"
+import { Footer7 } from "@/components/footer-7";
 
-// --- Navigation Bar Component ---
 export function NavBarDemo() {
   const navItems = [
-    { name: 'Home', url: '/', icon: Home },
-    { name: 'About', url: '/about', icon: User },
-    { name: 'Code Compiler', url: 'compiler', icon: Briefcase },
+    { name: "Home", url: "/", icon: Home },
+    { name: "About", url: "/about", icon: User },
+    { name: "Code Compiler", url: "compiler", icon: Briefcase },
   ];
 
   return <NavBar items={navItems} />;
 }
 
-// --- Button Component ---
 export function StarBorderDemo() {
   return (
     <div className="space-y-8">
-      <StarBorder>
-        Go to the Code Editor 
-      </StarBorder>
+      <StarBorder>Go to the Code Editor</StarBorder>
     </div>
   );
 }
-
-// --- TreeView Demo Component ---
 const DemoOne = () => {
   const treeData = [
     {
@@ -87,9 +80,15 @@ const DemoOne = () => {
       <div className="max-w-xl mx-auto w-full">
         <TreeView
           data={treeData}
-          onNodeClick={(
-            node: { id: string; label: string; children?: Array<{ id: string; label: string; children?: unknown[] }> }
-          ) => console.log("Clicked:", node.label)}
+          onNodeClick={(node: {
+            id: string;
+            label: string;
+            children?: Array<{
+              id: string;
+              label: string;
+              children?: unknown[];
+            }>;
+          }) => console.log("Clicked:", node.label)}
           defaultExpandedIds={["1"]}
         />
       </div>
@@ -99,14 +98,10 @@ const DemoOne = () => {
 
 export { DemoOne };
 
-// --- Footer Demo Component ---
 const FooterDemo = () => {
-  return (
-    <Footer7 />
-  );
+  return <Footer7 />;
 };
 
-// --- Testimonials Data ---
 const testimonials = [
   {
     text: "This ERP revolutionized our operations, streamlining finance and inventory. The cloud-based platform keeps us productive, even remotely.",
@@ -168,7 +163,6 @@ const firstColumn = testimonials.slice(0, 3);
 const secondColumn = testimonials.slice(3, 6);
 const thirdColumn = testimonials.slice(6, 9);
 
-// --- Testimonials Component (UPDATED with delay) ---
 const Testimonials = () => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -177,14 +171,13 @@ const Testimonials = () => {
       setIsVisible(true);
     }, 1500);
     return () => clearTimeout(timer);
-  }, []); 
+  }, []);
 
   if (!isVisible) {
     return null;
   }
 
   return (
-    // CHANGED: Removed dark background and fixed spacing
     <section className="py-20 relative w-full">
       <div className="container z-10 mx-auto">
         <motion.div
@@ -195,14 +188,15 @@ const Testimonials = () => {
           className="flex flex-col items-center justify-center max-w-[540px] mx-auto"
         >
           <div className="flex justify-center">
-            {/* CHANGED: Text and border color to dark gray */}
-            <div className="border border-slate-300 py-1 px-4 rounded-lg text-slate-600">Testimonials</div>
+            <div className="border border-slate-300 py-1 px-4 rounded-lg text-slate-600">
+              Testimonials
+            </div>
           </div>
-          {/* CHANGED: Heading text to dark gray */}
+
           <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tighter mt-5 text-slate-900">
             What our users say
           </h2>
-          {/* CHANGED: Paragraph text to medium gray */}
+
           <p className="text-center mt-5 opacity-75 text-slate-600">
             See what our customers have to say about us.
           </p>
@@ -210,60 +204,58 @@ const Testimonials = () => {
 
         <div className="flex justify-center gap-6 mt-10 [mask-image:linear-gradient(to_bottom,transparent,black_25%,black_75%,transparent)] max-h-[740px] overflow-hidden">
           <TestimonialsColumn testimonials={firstColumn} duration={15} />
-          <TestimonialsColumn testimonials={secondColumn} className="hidden md:block" duration={19} />
-          <TestimonialsColumn testimonials={thirdColumn} className="hidden lg:block" duration={17} />
+          <TestimonialsColumn
+            testimonials={secondColumn}
+            className="hidden md:block"
+            duration={19}
+          />
+          <TestimonialsColumn
+            testimonials={thirdColumn}
+            className="hidden lg:block"
+            duration={17}
+          />
         </div>
       </div>
     </section>
   );
 };
 
-// --- Main Page Component (Default Export) ---
 export default function HomePage() {
   return (
-    // CHANGED: Main background to a light gray
     <main className="relative w-full bg-slate-50">
-      
-      {/* --- Hero Section --- */}
       <div className="relative flex h-screen w-full flex-col items-center justify-center">
-        {/* Render the Navbar at the top */}
         <NavBarDemo />
-        
-        {/* Background Squares */}
+
         <div className="absolute inset-0 z-0">
           <Squares
             direction="diagonal"
             speed={0.5}
             squareSize={30}
-            // CHANGED: Props updated for a light background
             borderColor="#DDD"
             hoverFillColor="#EEE"
           />
         </div>
-        
-        {/* Centered Content */}
+
         <div className="relative z-10 flex flex-col items-center text-center">
-          {/* CHANGED: Heading text to dark gray */}
-          <h1 className="text-5xl font-bold text-slate-900">
-            Code.Connect
-          </h1>
-          {/* CHANGED: Paragraph text to medium gray */}
+          <h1 className="text-5xl font-bold text-slate-900">Code.Connect</h1>
+
           <p className="mt-4 text-lg text-slate-600">
             This is Your own Coding Playground
           </p>
-          {/* Render the Button below the text */}
+
           <div className="mt-8">
-              <StarBorderDemo />
+            <StarBorderDemo />
           </div>
         </div>
       </div>
-      
-      {/* --- TreeView Demo Section --- */}
+
       <section className="py-20 relative w-full">
         <div className="container z-10 mx-auto">
           <div className="flex flex-col items-center justify-center max-w-[540px] mx-auto mb-10">
             <div className="flex justify-center">
-              <div className="border border-slate-300 py-1 px-4 rounded-lg text-slate-600">File Explorer</div>
+              <div className="border border-slate-300 py-1 px-4 rounded-lg text-slate-600">
+                File Explorer
+              </div>
             </div>
             <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tighter mt-5 text-slate-900">
               Your Code Structure
@@ -275,12 +267,9 @@ export default function HomePage() {
           <DemoOne />
         </div>
       </section>
-      
+
       <Testimonials />
-      
-      {/* --- Footer Section --- */}
       <FooterDemo />
-      
     </main>
   );
 }

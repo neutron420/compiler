@@ -7,7 +7,7 @@ export default function AboutPage() {
     <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto px-6 py-16">
         
-        {/* Header */}
+
         <header className="mb-16">
           <div className="text-center">
             <h1 className="text-5xl font-bold text-black mb-4">About Code.Connect</h1>
@@ -16,7 +16,6 @@ export default function AboutPage() {
           </div>
         </header>
 
-        {/* Mission Section */}
         <section className="mb-16">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-black mb-4">Our Mission</h2>
