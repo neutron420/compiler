@@ -50,7 +50,7 @@ export default function CompilerPage() {
       setError(result.error);
       setExecutionTime(result.execution_time_ms);
     } catch (err) {
-      setError("Failed to connect to the server. Please ensure it is running and try again.");
+      setError("Failed to connect to the server.");
     } finally {
       setIsLoading(false);
     }
