@@ -62,7 +62,7 @@ impl Parser {
 
     pub fn parse_program(&mut self) -> Result<AstNode, String> {
         let mut statements = Vec::new();
-        while self.tokens.peek().is_some() {
+        while self.tokens.peek().is_some() && self.tokens.peek() != Some(&Token::Eof) {
             statements.push(self.parse_statement()?);
         }
         Ok(AstNode::Program(statements))
@@ -204,7 +204,10 @@ impl Parser {
     fn parse_return_statement(&mut self) -> Result<AstNode, String> {
         self.tokens.next(); // consume 'return'
         
-        let value = if self.tokens.peek() == Some(&Token::Semicolon) {
+        let value = if self.tokens.peek() == Some(&Token::Semicolon) || 
+                       self.tokens.peek() == Some(&Token::RightBrace) ||
+                       self.tokens.peek() == Some(&Token::Eof) ||
+                       self.tokens.peek().is_none() {
             None
         } else {
             Some(Box::new(self.parse_expression(0)?))
@@ -235,11 +238,15 @@ impl Parser {
     }
     
     fn parse_block_statement(&mut self) -> Result<AstNode, String> {
-        self.tokens.next();
+        self.tokens.next(); // consume '{'
         let mut statements = Vec::new();
-        while self.tokens.peek().is_some() && self.tokens.peek() != Some(&Token::RightBrace) {
+        
+        while self.tokens.peek().is_some() && 
+              self.tokens.peek() != Some(&Token::RightBrace) &&
+              self.tokens.peek() != Some(&Token::Eof) {
             statements.push(self.parse_statement()?);
         }
+        
         match self.tokens.next() {
             Some(Token::RightBrace) => Ok(AstNode::BlockStatement(statements)),
             _ => Err("Expected '}' to close block".to_string()),
@@ -262,6 +269,12 @@ impl Parser {
                 Some(token) => token.clone(),
                 None => break,
             };
+
+            // Stop parsing if we hit certain tokens
+            if matches!(op, Token::RightBrace | Token::RightParen | Token::RightBracket | 
+                           Token::Semicolon | Token::Comma | Token::Eof) {
+                break;
+            }
 
             let precedence = self.get_infix_precedence(&op);
             if precedence < min_precedence {
@@ -298,6 +311,7 @@ impl Parser {
 
         match token {
             Token::Number(n) => Ok(AstNode::Number(n)),
+            Token::Boolean(b) => Ok(AstNode::Boolean(b)),
             Token::True => Ok(AstNode::Boolean(true)),
             Token::False => Ok(AstNode::Boolean(false)),
             Token::String(s) => Ok(AstNode::String(s)),
@@ -307,7 +321,9 @@ impl Parser {
                     self.tokens.next(); // consume '('
                     let mut arguments = Vec::new();
                     
-                    while self.tokens.peek() != Some(&Token::RightParen) {
+                    while self.tokens.peek() != Some(&Token::RightParen) && 
+                          self.tokens.peek() != Some(&Token::Eof) &&
+                          self.tokens.peek().is_some() {
                         arguments.push(self.parse_expression(0)?);
                         if self.tokens.peek() == Some(&Token::Comma) {
                             self.tokens.next(); // consume comma
@@ -329,7 +345,9 @@ impl Parser {
             Token::LeftBracket => {
                 let mut elements = Vec::new();
                 
-                while self.tokens.peek() != Some(&Token::RightBracket) {
+                while self.tokens.peek() != Some(&Token::RightBracket) && 
+                      self.tokens.peek() != Some(&Token::Eof) &&
+                      self.tokens.peek().is_some() {
                     elements.push(self.parse_expression(0)?);
                     if self.tokens.peek() == Some(&Token::Comma) {
                         self.tokens.next(); // consume comma
@@ -354,7 +372,22 @@ impl Parser {
                     _ => Err("Expected ')'".to_string()),
                 }
             }
-            Token::LeftBrace => self.parse_block_statement(),
+            Token::LeftBrace => {
+                // Put the token back and parse as block statement
+                // This is a bit hacky but works for this simple parser
+                let mut statements = Vec::new();
+                
+                while self.tokens.peek().is_some() && 
+                      self.tokens.peek() != Some(&Token::RightBrace) &&
+                      self.tokens.peek() != Some(&Token::Eof) {
+                    statements.push(self.parse_statement()?);
+                }
+                
+                match self.tokens.next() {
+                    Some(Token::RightBrace) => Ok(AstNode::BlockStatement(statements)),
+                    _ => Err("Expected '}' to close block".to_string()),
+                }
+            }
             t => Err(format!("Unexpected token for prefix expression: {:?}", t)),
         }
     }

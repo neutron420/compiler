@@ -1,4 +1,4 @@
-
+// src/main.rs - Fixed version with proper temporary file handling
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, middleware::Logger};
 use serde::{Deserialize, Serialize};
 use actix_cors::Cors;
@@ -8,9 +8,9 @@ use dotenv::dotenv;
 use std::env;
 use std::process::{Command, Stdio};
 use std::io::Write;
-// Use Builder to create a tempfile with an extension
-use tempfile::{NamedTempFile, Builder};
+use tempfile::NamedTempFile;
 use tokio::time::{timeout, Duration};
+use std::fs;
 
 mod lexer;
 mod parser;
@@ -42,13 +42,14 @@ struct CompileResponse {
 
 // Enhanced security for code execution
 const EXECUTION_TIMEOUT: Duration = Duration::from_secs(10);
-const MAX_OUTPUT_SIZE: usize = 10_000; 
+const MAX_OUTPUT_SIZE: usize = 10_000; // 10KB max output
 
 async fn compile_handler(req: web::Json<CompileRequest>, pool: web::Data<PgPool>) -> impl Responder {
     let start_time = std::time::Instant::now();
     let code = &req.code;
     let language = &req.language.to_lowercase();
 
+    // Security: Basic input validation
     if code.len() > 50_000 {
         return HttpResponse::BadRequest().json(CompileResponse {
             result: None,
@@ -118,28 +119,35 @@ async fn execute_custom_language(code: &str) -> Result<String, String> {
     let ast = parser.parse_program()?;
     let mut env = HashMap::new();
     
-    // Capture stdout for print statements
+    // Execute the code
     let result = evaluator::evaluate(&ast, &mut env)?;
     
-    // Combine any print output with final result
-    let result_str = if result.to_string() == "null" {
-        String::new()
-    } else {
-        result.to_string()
-    };
+    // Get any output from print statements
+    let output = evaluator::get_output();
     
-    Ok(result_str)
+    // Combine print output with result
+    if !output.is_empty() {
+        // If there was print output, return that
+        Ok(output.trim_end().to_string())
+    } else {
+        // If no print output, return the final result value
+        match result {
+            object::Object::Null => Ok(String::new()),
+            object::Object::String(s) if s.is_empty() => Ok(String::new()),
+            other => Ok(other.to_string())
+        }
+    }
 }
 
-// Execute Rust code
+// Fixed Rust code execution
 async fn execute_rust_code(code: &str) -> Result<String, String> {
-    // Create temporary file for Rust code
-    let mut temp_file = Builder::new()
-        .prefix("user_code_")
-        .suffix(".rs")
-        .tempfile()
-        .map_err(|e| format!("Failed to create temp file: {}", e))?;
-
+    // Create temporary directory
+    let temp_dir = tempfile::tempdir()
+        .map_err(|e| format!("Failed to create temp directory: {}", e))?;
+    
+    // Create rust file with proper name
+    let rust_file = temp_dir.path().join("main.rs");
+    
     // Wrap code in main function if not present
     let wrapped_code = if !code.contains("fn main") {
         format!("fn main() {{\n{}\n}}", code)
@@ -147,20 +155,22 @@ async fn execute_rust_code(code: &str) -> Result<String, String> {
         code.to_string()
     };
     
-    write!(temp_file, "{}", wrapped_code)
+    fs::write(&rust_file, wrapped_code)
         .map_err(|e| format!("Failed to write code: {}", e))?;
     
-    let temp_path = temp_file.path();
-    let exe_path = temp_path.with_extension("exe");
+    // Use proper executable extension for Windows
+    let exe_file = if cfg!(target_os = "windows") {
+        temp_dir.path().join("main.exe")
+    } else {
+        temp_dir.path().join("main")
+    };
     
     // Compile Rust code
     let compile_output = timeout(EXECUTION_TIMEOUT, async {
         Command::new("rustc")
-            .arg(temp_path)
+            .arg(&rust_file)
             .arg("-o")
-            .arg(&exe_path)
-            .arg("--crate-name") 
-            .arg("user_code")   
+            .arg(&exe_file)
             .arg("--edition=2021")
             .arg("-A")
             .arg("warnings")
@@ -179,7 +189,7 @@ async fn execute_rust_code(code: &str) -> Result<String, String> {
     
     // Execute compiled binary
     let run_output = timeout(EXECUTION_TIMEOUT, async {
-        Command::new(&exe_path)
+        Command::new(&exe_file)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
@@ -187,9 +197,6 @@ async fn execute_rust_code(code: &str) -> Result<String, String> {
     .await
     .map_err(|_| "Execution timeout".to_string())?
     .map_err(|e| format!("Execution failed: {}", e))?;
-    
-    // Clean up
-    let _ = std::fs::remove_file(&exe_path);
     
     if !run_output.status.success() {
         return Err(format!("Runtime error: {}", 
@@ -204,55 +211,74 @@ async fn execute_rust_code(code: &str) -> Result<String, String> {
     Ok(output.to_string())
 }
 
-// Execute Python code
+// Execute Python code with multiple fallbacks
 async fn execute_python_code(code: &str) -> Result<String, String> {
-    let output = timeout(EXECUTION_TIMEOUT, async {
-        // --- FIX: Changed "python3" to "python" for Windows compatibility ---
-        Command::new("python")
-            .arg("-c")
-            .arg(code)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-    })
-    .await
-    .map_err(|_| "Execution timeout".to_string())?
-    .map_err(|e| format!("Failed to execute Python: {}", e))?;
+    // Try different Python commands in order
+    let python_commands = ["python", "python3", "py"];
     
-    if !output.status.success() {
-        return Err(format!("Python error: {}", 
-            String::from_utf8_lossy(&output.stderr)));
+    for cmd in &python_commands {
+        // Check if this Python command is available
+        let python_check = Command::new(cmd)
+            .arg("--version")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+            
+        if python_check.is_ok() {
+            let output = timeout(EXECUTION_TIMEOUT, async {
+                Command::new(cmd)
+                    .arg("-c")
+                    .arg(code)
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .output()
+            })
+            .await
+            .map_err(|_| "Execution timeout".to_string())?
+            .map_err(|e| format!("Failed to execute Python: {}", e))?;
+            
+            if !output.status.success() {
+                return Err(format!("Python error: {}", 
+                    String::from_utf8_lossy(&output.stderr)));
+            }
+            
+            let result = String::from_utf8_lossy(&output.stdout);
+            if result.len() > MAX_OUTPUT_SIZE {
+                return Err("Output too large".to_string());
+            }
+            
+            return Ok(result.to_string());
+        }
     }
     
-    let result = String::from_utf8_lossy(&output.stdout);
-    if result.len() > MAX_OUTPUT_SIZE {
-        return Err("Output too large".to_string());
-    }
-    
-    Ok(result.to_string())
+    Err("Python is not installed or not accessible. Please install Python or use a different language.".to_string())
 }
 
-// Execute C code
+// Fixed C code execution
 async fn execute_c_code(code: &str) -> Result<String, String> {
-    // --- FIX: Create a temp file that ends with ".c" ---
-    let mut temp_file = Builder::new()
-        .prefix("user_code_")
-        .suffix(".c")
-        .tempfile()
-        .map_err(|e| format!("Failed to create temp file: {}", e))?;
+    // Create temporary directory
+    let temp_dir = tempfile::tempdir()
+        .map_err(|e| format!("Failed to create temp directory: {}", e))?;
     
-    write!(temp_file, "{}", code)
+    // Create C file with proper name
+    let c_file = temp_dir.path().join("main.c");
+    
+    fs::write(&c_file, code)
         .map_err(|e| format!("Failed to write code: {}", e))?;
     
-    let temp_path = temp_file.path();
-    let exe_path = temp_path.with_extension("exe");
+    // Use proper executable extension for Windows
+    let exe_file = if cfg!(target_os = "windows") {
+        temp_dir.path().join("main.exe")
+    } else {
+        temp_dir.path().join("main")
+    };
     
     // Compile C code
     let compile_output = timeout(EXECUTION_TIMEOUT, async {
         Command::new("gcc")
-            .arg(temp_path)
+            .arg(&c_file)
             .arg("-o")
-            .arg(&exe_path)
+            .arg(&exe_file)
             .arg("-std=c99")
             .arg("-Wall")
             .stdout(Stdio::piped())
@@ -270,7 +296,7 @@ async fn execute_c_code(code: &str) -> Result<String, String> {
     
     // Execute compiled binary
     let run_output = timeout(EXECUTION_TIMEOUT, async {
-        Command::new(&exe_path)
+        Command::new(&exe_file)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
@@ -278,9 +304,6 @@ async fn execute_c_code(code: &str) -> Result<String, String> {
     .await
     .map_err(|_| "Execution timeout".to_string())?
     .map_err(|e| format!("Execution failed: {}", e))?;
-    
-    // Clean up
-    let _ = std::fs::remove_file(&exe_path);
     
     if !run_output.status.success() {
         return Err(format!("Runtime error: {}", 

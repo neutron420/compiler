@@ -94,7 +94,7 @@ export default function CompilerPage() {
                   language={languageOptions[selectedLanguage].editorLanguage}
                   value={code}
                   onChange={(value) => setCode(value || "")}
-                  theme="vs-light" // Light theme for the editor
+                  theme="vs-light"
                   options={{ 
                     minimap: { enabled: false }, 
                     fontSize: 16, 
